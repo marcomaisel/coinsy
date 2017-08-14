@@ -8,9 +8,9 @@ var APP_ID = 'xxx';
 exports.handler = (event, context, callback) => {
     var alexa = Alexa.handler(event, context);
 
-    alexa.appId = APP_ID;
-    alexa.registerHandlers(newSessionHandlers, startHandlers, getCurrencyRateHandlers, getChangeHandlers, getMarketCapHandlers, getInfoHandlers);
-    alexa.execute();
+alexa.appId = APP_ID;
+alexa.registerHandlers(newSessionHandlers, startHandlers, getCurrencyRateHandlers, getChangeHandlers, getMarketCapHandlers, getInfoHandlers);
+alexa.execute();
 };
 
 var states = {
@@ -55,7 +55,7 @@ var newSessionHandlers = {
      * Triggered when the user opens the skill directly with the "getChange" command.
      * Sets the state to GETCHANGEMODE.
      */
-    'GetChangeIntent': function () {
+        'GetChangeIntent': function () {
         this.handler.state = states.GETCHANGEMODE;
         this.emitWithState("NewSession");
     },
@@ -63,15 +63,15 @@ var newSessionHandlers = {
      * Triggered when the user opens the skill directly with the "getMarketCap" command.
      * Sets the state to GETMARKETCAPMODE.
      */
-    'GetMarketCapIntent': function () {
+        'GetMarketCapIntent': function () {
         this.handler.state = states.GETMARKETCAPMODE;
         this.emitWithState("NewSession");
     },
-    /**
+     /**
      * Triggered when the user opens the skill directly with the "getInfo" command.
      * Sets the state to GETINFOMODE.
      */
-    'GetInfoIntent': function () {
+        'GetInfoIntent': function () {
         this.handler.state = states.GETINFOMODE;
         this.emitWithState("NewSession");
     },
@@ -109,10 +109,37 @@ var startHandlers = Alexa.CreateStateHandler(states.STARTMODE, {
     /**
      * Triggered when the user opened the skill with no furter command and then
      * decided to call the "getInfo" command.
+     * Sets the state to GETINFOMODE
+     */
+    'GetInfoIntent': function () {
+        this.handler.state = states.GETINFOMODE;
+        this.emitWithState("NewSession");
+    },
+     /**
+     * Triggered when the user opened the skill with no furter command and then
+     * decided to call the "getInfo" command.
      * Sets the state to GETRATEMODE
      */
-    'StartGetInfoIntent': function () {
-        this.handler.state = states.GETINFOMODE;
+    'GetRateIntent': function () {
+        this.handler.state = states.GETRATEMODE;
+        this.emitWithState("NewSession");
+    },
+     /**
+     * Triggered when the user opened the skill with no furter command and then
+     * decided to call the "getInfo" command.
+     * Sets the state to GETCHANGEMODE
+     */
+    'GetChangeIntent': function () {
+        this.handler.state = states.GETCHANGEMODE;
+        this.emitWithState("NewSession");
+    },
+     /**
+     * Triggered when the user opened the skill with no furter command and then
+     * decided to call the "getInfo" command.
+     * Sets the state to GETMARKETCAPMODE
+     */
+    'GetMarketCapIntent': function () {
+        this.handler.state = states.GETMARKETCAPMODE;
         this.emitWithState("NewSession");
     }
 });
@@ -128,12 +155,12 @@ var getCurrencyRateHandlers = Alexa.CreateStateHandler(states.GETRATEMODE, {
      */
     "NewSession": function () {
         this.emit('NewSession');
-
+        
         var slots = this.event.request.intent.slots;
-
+        
         //Get cryptoCurrency
         var cryptoCurry = slots.cryptoCurrency.value;
-
+        
         /*function slotValue(slot, useId){
         let value = slot.value;
         let resolution = (slot.resolutions && slot.resolutions.resolutionsPerAuthority && slot.resolutions.resolutionsPerAuthority.length > 0) ? slot.resolutions.resolutionsPerAuthority[0] : null;
@@ -145,21 +172,33 @@ var getCurrencyRateHandlers = Alexa.CreateStateHandler(states.GETRATEMODE, {
         }
         
         var cryptoCurry = slotValue(this.event.request.intent.slots.cryptoCurrency,true);*/
-
+        
         //Get currency
         var curry = slots.currency.value;
 
         getData(cryptoCurry, (myResult) => {
-            if (curry == "dollar") {
+            
+            if (myResult[0]===undefined){
+                let curryNotFound = 'Die Währung konnte nicht gefunden werden. Bitte versuche es mit einer unterstützten Währung erneut.';
+                this.emit(':ask', curryNotFound, curryNotFound);
+            } else {
+            
+            if (curry == "dollar"){
                 let rateDollar = Math.floor((Number(myResult[0].price_usd)) * 100) / 100;
-                let toldMessage = 'Der ' + cryptoCurry + ' Kurs liegt bei $' + rateDollar;
+                let toldMessage = 'Der ' +cryptoCurry+ ' Kurs liegt bei $' + rateDollar;
                 this.emit(':tell', toldMessage);
             } else {
                 let rateEuro = Math.floor((Number(myResult[0].price_eur)) * 100) / 100;
-                let toldMessage = 'Der ' + cryptoCurry + ' Kurs liegt bei ' + rateEuro + '€';
+                let toldMessage = 'Der ' +cryptoCurry+ ' Kurs liegt bei ' + rateEuro + '€';
                 this.emit(':tell', toldMessage);
             }
+}
         });
+    },
+            //Fallback if user doesn't say a valid cryptocurrency
+    'GetRateIntent': function () {
+        this.handler.state = states.GETRATEMODE;
+        this.emitWithState("NewSession");
     },
     "AMAZON.HelpIntent": function () {
         let message = 'Mir ist leider ein Fehler unterlaufen. Bitte sage "Stop" und öffne die Anwendung erneut';
@@ -191,23 +230,36 @@ var getChangeHandlers = Alexa.CreateStateHandler(states.GETCHANGEMODE, {
      */
     "NewSession": function () {
         this.emit('NewSession');
-
+        
         var slots = this.event.request.intent.slots;
-
+        
         //Get cryptoCurrency
         var cryptoCurry = slots.cryptoCurrency.value;
-
+        
         getData(cryptoCurry, (myResult) => {
-            let changeHour = myResult[0].percent_change_1h;
-            changeHour = changeHour.replace('.', ',');
-            let changeDay = myResult[0].percent_change_24h;
-            changeDay = changeDay.replace('.', ',');
-            let changeWeek = myResult[0].percent_change_7d;
-            changeWeek = changeWeek.replace('.', ',');
-            let toldMessage = 'Es folgen die Preisschwankungen von ' + cryptoCurry + '. In den letzten 60 Minuten: ' + changeHour + '%. In den letzten 24 Stunden: ' + changeDay + '%. In den letzten 7 Tagen: ' + changeWeek + '%.';
-            this.emit(':tell', toldMessage);
-        });
+            
+                        if (myResult[0]===undefined){
+                let curryNotFound = 'Die Währung konnte nicht gefunden werden. Bitte versuche es mit einer unterstützten Währung erneut.';
+                this.emit(':ask', curryNotFound, curryNotFound);
+            } else {
+                
+                let changeHour = myResult[0].percent_change_1h;
+                changeHour = changeHour.replace('.',',');
+                let changeDay = myResult[0].percent_change_24h;
+                changeDay = changeDay.replace('.',',');
+                let changeWeek = myResult[0].percent_change_7d;
+                changeWeek = changeWeek.replace('.',',');
+                let toldMessage = 'Es folgen die Preisschwankungen von ' +cryptoCurry+ '. In den letzten 60 Minuten: ' + changeHour + '%. In den letzten 24 Stunden: ' + changeDay + '%. In den letzten 7 Tagen: ' + changeWeek + '%.';
+                this.emit(':tell', toldMessage);
+        
+            }
+            });
 
+    },
+        //Fallback if user doesn't say a valid cryptocurrency
+    'GetChangeIntent': function () {
+        this.handler.state = states.GETCHANGEMODE;
+        this.emitWithState("NewSession");
     },
     "AMAZON.HelpIntent": function () {
         let message = 'Mir ist leider ein Fehler unterlaufen. Bitte sage "Stop" und öffne die Anwendung erneut';
@@ -239,19 +291,31 @@ var getMarketCapHandlers = Alexa.CreateStateHandler(states.GETMARKETCAPMODE, {
      */
     "NewSession": function () {
         this.emit('NewSession');
-
+        
         var slots = this.event.request.intent.slots;
-
+        
         //Get cryptoCurrency
         var cryptoCurry = slots.cryptoCurrency.value;
-
+        
         getData(cryptoCurry, (myResult) => {
-            let marketCapEuro = Math.floor((Number(myResult[0].market_cap_eur)));
-            let marketCapDollar = Math.floor((Number(myResult[0].market_cap_usd)));
-            let toldMessage = 'Die Marktkapitalisierung von ' + cryptoCurry + ' beträgt ' + marketCapEuro + '€, beziehungsweise $' + marketCapDollar + ' Dollar';
-            this.emit(':tell', toldMessage);
+            
+            if (myResult[0]===undefined){
+                let curryNotFound = 'Die Währung konnte nicht gefunden werden. Bitte versuche es mit einer unterstützten Währung erneut.';
+                this.emit(':ask', curryNotFound, curryNotFound);
+            } else {
+                
+                let marketCapEuro = Math.floor((Number(myResult[0].market_cap_eur)));
+                let marketCapDollar = Math.floor((Number(myResult[0].market_cap_usd)));
+                let toldMessage = 'Die Marktkapitalisierung von ' + cryptoCurry + ' beträgt ' + marketCapEuro + '€, beziehungsweise $'+ marketCapDollar + ' Dollar';
+                this.emit(':tell', toldMessage);
+            }
         });
 
+    },
+    //Fallback if user doesn't say a valid cryptocurrency
+    'GetMarketCapIntent': function () {
+        this.handler.state = states.GETMARKETCAPMODE;
+        this.emitWithState("NewSession");
     },
     "AMAZON.HelpIntent": function () {
         let message = 'Mir ist leider ein Fehler unterlaufen. Bitte sage "Stop" und öffne die Anwendung erneut';
@@ -283,27 +347,41 @@ var getInfoHandlers = Alexa.CreateStateHandler(states.GETINFOMODE, {
      */
     "NewSession": function () {
         this.emit('NewSession');
-
+        
         var slots = this.event.request.intent.slots;
-
+        
         //Get cryptoCurrency
         var cryptoCurry = slots.cryptoCurrency.value;
 
         getData(cryptoCurry, (myResult) => {
-            let rateDollar = Math.floor((Number(myResult[0].price_usd)) * 100) / 100;
-            let rateEuro = Math.floor((Number(myResult[0].price_eur)) * 100) / 100;
-            let changeHour = myResult[0].percent_change_1h;
-            changeHour = changeHour.replace('.', ',');
-            let changeDay = myResult[0].percent_change_24h;
-            changeDay = changeDay.replace('.', ',');
-            let changeWeek = myResult[0].percent_change_7d;
-            changeWeek = changeWeek.replace('.', ',');
-            let marketCapEuro = Math.floor((Number(myResult[0].market_cap_eur)));
-            let marketCapDollar = Math.floor((Number(myResult[0].market_cap_usd)));
+            
+            if (myResult[0]===undefined){
+                let curryNotFound = 'Die Währung konnte nicht gefunden werden. Bitte versuche es mit einer unterstützten Währung erneut.';
+                this.emit(':ask', curryNotFound, curryNotFound);
 
-            let toldMessage = 'Der ' + cryptoCurry + ' Kurs liegt bei ' + rateEuro + '€, beziehungsweise $' + rateDollar + '. Die Preisschwankungen betragen: In den letzten 60 Minuten: ' + changeHour + '%. In den letzten 24 Stunden: ' + changeDay + '%. In den letzten 7 Tagen: ' + changeWeek + '%. ' + 'Die Marktkapitalisierung beträgt ' + marketCapEuro + '€, beziehungsweise $' + marketCapDollar;
-            this.emit(':tell', toldMessage);
+                this.handler.state = states.GETINFOMODE;
+            } else {
+            
+                let rateDollar = Math.floor((Number(myResult[0].price_usd)) * 100) / 100;
+                let rateEuro = Math.floor((Number(myResult[0].price_eur)) * 100) / 100;
+                let changeHour = myResult[0].percent_change_1h;
+                changeHour = changeHour.replace('.',',');
+                let changeDay = myResult[0].percent_change_24h;
+                changeDay = changeDay.replace('.',',');
+                let changeWeek = myResult[0].percent_change_7d;
+                changeWeek = changeWeek.replace('.',',');
+                let marketCapEuro = Math.floor((Number(myResult[0].market_cap_eur)));
+                let marketCapDollar = Math.floor((Number(myResult[0].market_cap_usd)));
+                
+                let toldMessage = 'Der ' +cryptoCurry+ ' Kurs liegt bei ' + rateEuro + '€, beziehungsweise $' + rateDollar + '. Die Preisschwankungen betragen: In den letzten 60 Minuten: ' + changeHour + '%. In den letzten 24 Stunden: ' + changeDay + '%. In den letzten 7 Tagen: ' + changeWeek + '%. ' + 'Die Marktkapitalisierung beträgt ' + marketCapEuro + '€, beziehungsweise $' + marketCapDollar;
+                this.emit(':tell', toldMessage);
+            }
         });
+    },
+    //Fallback if user doesn't say a valid cryptocurrency
+    'GetInfoIntent': function () {
+        this.handler.state = states.GETINFOMODE;
+        this.emitWithState("NewSession");
     },
     "AMAZON.HelpIntent": function () {
         let message = 'Mir ist leider ein Fehler unterlaufen. Bitte sage "Stop" und öffne die Anwendung erneut';
@@ -339,7 +417,7 @@ function getData(myData, callback) {
         path: '/v1/ticker/' + encodeURIComponent(myData) + '/?convert=EUR',
     };
 
-    var req = https.request(options, res => {
+var req = https.request(options, res => {
         res.setEncoding('utf8');
         var returnData = "";
 
